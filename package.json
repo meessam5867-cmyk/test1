@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Summer Vacation Recommendation and Itinerary Web App",
   "main": "api/generate.js",
+  "type": "module",
   "dependencies": {
     "@google/genai": "latest"
   },
