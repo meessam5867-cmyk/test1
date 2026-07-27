@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시원한 여름 휴가 플래너</title>
+    <style>
+        :root {
+            --bg-color: #f0f7ff;
+            --card-bg: #ffffff;
+            --primary-color: #0066ff;
+            --primary-hover: #0052cc;
+            --text-color: #333333;
+            --sub-text: #666666;
+            --border-color: #d0e3ff;
+        }
+
+        body {
+            font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        header h1 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--sub-text);
+            font-size: 1rem;
+        }
+
+        .search-box {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 102, 255, 0.08);
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid var(--border-color);
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 16px;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .search-box input:focus {
+            border-color: var(--primary-color);
+        }
+
+        .search-box button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-box button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .output-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .output-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 102, 255, 0.08);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            min-height: 400px;
+        }
+
+        .panel h2 {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            margin-top: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+        }
+
+        .timetable-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            overflow-y: auto;
+            max-height: 450px;
+        }
+
+        .time-item {
+            display: flex;
+            gap: 15px;
+            padding: 12px;
+            background-color: #f8fbff;
+            border-left: 4px solid var(--primary-color);
+            border-radius: 6px;
+        }
+
+        .time-badge {
+            font-weight: bold;
+            color: var(--primary-color);
+            min-width: 55px;
+        }
+
+        .time-content h4 {
+            margin: 0 0 4px 0;
+            font-size: 1rem;
+        }
+
+        .time-content p {
+            margin: 0;
+            font-size: 0.9rem;
+            color: var(--sub-text);
+        }
+
+        .description-content {
+            line-height: 1.6;
+            color: var(--text-color);
+            overflow-y: auto;
+            max-height: 450px;
+        }
+
+        .loading {
+            text-align: center;
+            color: var(--sub-text);
+            margin-top: 50px;
+        }
+
+        #alarm-banner {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            display: none;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>🌊 시원한 여름 휴가 플래너</h1>
+            <p>가고 싶은 장소를 입력하면 AI가 맞춤형 여행 일정과 설명을 짜드립니다.</p>
+        </header>
+
+        <div class="search-box">
+            <input type="text" id="destination-input" placeholder="예: 제주도 애월, 하와이 와이키키, 강원도 양양 등" />
+            <button onclick="generatePlan()">일정 추천받기</button>
+        </div>
+
+        <div class="output-container">
+            <div class="panel">
+                <h2>⏰ 맞춤 타임테이블</h2>
+                <div id="timetable-container" class="timetable-list">
+                    <div class="loading">장소를 입력하고 일정을 만들어보세요!</div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>🏖️ 여행지 상세 안내</h2>
+                <div id="description-container" class="description-content">
+                    <div class="loading">이곳에 상세한 여행 추천 설명이 표시됩니다.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="alarm-banner">
+        <h4 id="alarm-title" style="margin:0 0 5px 0;">🔔 일정 알람</h4>
+        <p id="alarm-text" style="margin:0; font-size:0.9rem;"></p>
+    </div>
+
+    <script>
+        let currentTimetable = [];
+        let checkedAlarms = new Set();
+
+        async function generatePlan() {
+            const destination = document.getElementById('destination-input').value.trim();
+            if (!destination) {
+                alert('장소를 입력해주세요!');
+                return;
+            }
+
+            const timetableContainer = document.getElementById('timetable-container');
+            const descriptionContainer = document.getElementById('description-container');
+
+            timetableContainer.innerHTML = '<div class="loading">AI가 멋진 휴가 계획을 세우는 중입니다... ✈️</div>';
+            descriptionContainer.innerHTML = '<div class="loading">잠시만 기다려주세요!</div>';
+
+            try {
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destination })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || '서버 오류가 발생했습니다.');
+                }
+
+                descriptionContainer.innerHTML = data.description;
+                currentTimetable = data.timetable;
+                checkedAlarms.clear();
+                renderTimetable(currentTimetable);
+
+            } catch (error) {
+                alert(error.message);
+                timetableContainer.innerHTML = '<div class="loading">일정을 불러오지 못했습니다.</div>';
+                descriptionContainer.innerHTML = '<div class="loading">다시 시도해주세요.</div>';
+            }
+        }
+
+        function renderTimetable(timetable) {
+            const container = document.getElementById('timetable-container');
+            container.innerHTML = '';
+
+            timetable.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'time-item';
+                div.innerHTML = `
+                    <div class="time-badge">${item.time}</div>
+                    <div class="time-content">
+                        <h4>${item.title}</h4>
+                        <p>${item.task}</p>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function checkAlarms() {
+            if (!currentTimetable || currentTimetable.length === 0) return;
+
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const currentTimeStr = `${hours}:${minutes}`;
+
+            currentTimetable.forEach((item, index) => {
+                if (item.time === currentTimeStr && !checkedAlarms.has(index)) {
+                    checkedAlarms.add(index);
+                    triggerAlarm(item.title, item.task);
+                }
+            });
+        }
+
+        function triggerAlarm(title, task) {
+            const banner = document.getElementById('alarm-banner');
+            document.getElementById('alarm-title').innerText = `🔔 [일정 알람] ${title}`;
+            document.getElementById('alarm-text').innerText = task;
+            
+            banner.style.display = 'block';
+
+            if (Notification.permission === 'granted') {
+                new Notification(`[여행 일정 알람] ${title}`, { body: task });
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        new Notification(`[여행 일정 알람] ${title}`, { body: task });
+                    }
+                });
+            }
+
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 5000);
+        }
+
+        if (window.Notification && Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+
+        setInterval(checkAlarms, 30000);
+    </script>
+</body>
+</html>

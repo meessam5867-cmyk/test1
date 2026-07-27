@@ -1,0 +1,13 @@
+{
+  "name": "summer-trip-planner",
+  "version": "1.0.0",
+  "description": "Summer Vacation Recommendation and Itinerary Web App",
+  "main": "api/generate.js",
+  "dependencies": {
+    "@google/genai": "^0.1.1"
+  },
+  "devDependencies": {},
+  "engines": {
+    "node": "18.x"
+  }
+}
