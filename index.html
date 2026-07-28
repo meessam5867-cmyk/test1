@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>시원한 여름 휴가 플래너</title>
+    <title>시원한 여름 휴가 플래너 & 의견 게시판</title>
     <style>
         :root {
             --bg-color: #f0f7ff;
@@ -172,6 +172,92 @@
             margin-top: 50px;
         }
 
+        .board-section {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0, 102, 255, 0.08);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .board-section h2 {
+            font-size: 1.25rem;
+            color: var(--primary-color);
+            margin: 0 0 10px 0;
+            border-bottom: 2px solid var(--bg-color);
+            padding-bottom: 10px;
+        }
+
+        .board-input-box {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .board-input-box textarea {
+            width: 100%;
+            height: 80px;
+            padding: 12px;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            outline: none;
+            resize: vertical;
+        }
+
+        .board-input-box textarea:focus {
+            border-color: var(--primary-color);
+        }
+
+        .board-input-box button {
+            align-self: flex-end;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .board-input-box button:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .board-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .board-item {
+            padding: 12px;
+            background-color: #f8fbff;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .board-item .date {
+            font-size: 0.8rem;
+            color: var(--sub-text);
+        }
+
+        .board-item .content {
+            font-size: 0.95rem;
+            color: var(--text-color);
+            word-break: break-all;
+        }
+
         #alarm-banner {
             position: fixed;
             bottom: 20px;
@@ -220,12 +306,104 @@
                 </div>
             </div>
         </div>
+
+        <div class="board-section">
+            <h2>💬 사용자 의견 게시판</h2>
+            <div class="board-input-box">
+                <textarea id="board-content" placeholder="여행 후기나 개선 의견을 남겨주세요!"></textarea>
+                <button onclick="addPost()">등록하기</button>
+            </div>
+            <div id="board-list" class="board-list">
+                <div class="loading" style="margin-top:10px;">등록된 의견을 불러오는 중...</div>
+            </div>
+        </div>
     </div>
 
     <div id="alarm-banner">
         <h4 id="alarm-title" style="margin:0 0 5px 0;">🔔 일정 알람</h4>
         <p id="alarm-text" style="margin:0; font-size:0.9rem;"></p>
     </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbxcvPv0684AP_uMbxI7FRaJAB-aGQbP8",
+            authDomain: "erica-3b4fc.firebaseapp.com",
+            projectId: "erica-3b4fc",
+            storageBucket: "erica-3b4fc.firebasestorage.app",
+            messagingSenderId: "426225255899",
+            appId: "1:426225255899:web:b9935b5f631e13f00b93fe"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        async function loadPosts() {
+            const boardListEl = document.getElementById('board-list');
+            try {
+                const q = query(collection(db, "posts"), orderBy("timestamp", "desc"));
+                const querySnapshot = await getDocs(q);
+                
+                boardListEl.innerHTML = '';
+                if (querySnapshot.empty) {
+                    boardListEl.innerHTML = '<div style="text-align:center; color:#666; padding:15px;">등록된 의견이 없습니다. 첫 의견을 남겨주세요!</div>';
+                    return;
+                }
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const dateStr = data.timestamp ? new Date(data.timestamp.toDate()).toLocaleString('ko-KR') : '방금 전';
+                    
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'board-item';
+                    itemDiv.innerHTML = `
+                        <div class="date">${dateStr}</div>
+                        <div class="content">${escapeHtml(data.content)}</div>
+                    `;
+                    boardListEl.appendChild(itemDiv);
+                });
+            } catch (error) {
+                console.error("게시글 불러오기 오류:", error);
+                boardListEl.innerHTML = '<div style="text-align:center; color:red; padding:15px;">게시글을 불러오는 중 오류가 발생했습니다. (Firestore 규칙 및 설정을 확인해주세요)</div>';
+            }
+        }
+
+        window.addPost = async function() {
+            const contentInput = document.getElementById('board-content');
+            const content = contentInput.value.trim();
+
+            if (!content) {
+                alert('내용을 입력해주세요!');
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, "posts"), {
+                    content: content,
+                    timestamp: serverTimestamp()
+                });
+
+                contentInput.value = '';
+                loadPosts();
+            } catch (error) {
+                console.error("게시글 등록 오류:", error);
+                alert('등록 중 오류가 발생했습니다.');
+            }
+        };
+
+        function escapeHtml(text) {
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        loadPosts();
+    </script>
 
     <script>
         let currentTimetable = [];
@@ -288,7 +466,7 @@
         }
 
         function checkAlarms() {
-            if (!currentTimetable || currentTimetable.length === 0) return;
+            if (!currentTimetable || !Array.isArray(currentTimetable) || currentTimetable.length === 0) return;
 
             const now = new Date();
             const hours = String(now.getHours()).padStart(2, '0');
@@ -310,9 +488,9 @@
             
             banner.style.display = 'block';
 
-            if (Notification.permission === 'granted') {
+            if (window.Notification && Notification.permission === 'granted') {
                 new Notification(`[여행 일정 알람] ${title}`, { body: task });
-            } else if (Notification.permission !== 'denied') {
+            } else if (window.Notification && Notification.permission !== 'denied') {
                 Notification.requestPermission().then(permission => {
                     if (permission === 'granted') {
                         new Notification(`[여행 일정 알람] ${title}`, { body: task });
